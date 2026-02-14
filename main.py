@@ -2,27 +2,23 @@ import tkinter
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import customtkinter as ctk
 import os
-import sys  # Needed for the .exe path logic
+import sys
 import threading
 import json
+from datetime import datetime
 from PIL import Image
 from tkinter import filedialog
-
+from datetime import datetime, date
 # --- HELPER: Find files inside the .exe ---
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
 # --- App Configuration ---
 ctk.set_appearance_mode("System")
-
-# Load Theme
 theme_path = resource_path("pixel_theme.json")
 ctk.set_default_color_theme(theme_path)
 
@@ -31,16 +27,13 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
         super().__init__()
         
         self.TkdndVersion = TkinterDnD._require(self)
-
-        # --- SETTINGS MANAGEMENT---
         self.settings_file = "settings.json" 
         self.settings = self.load_settings()
 
-        # --- Window Setup ---
+        # Window Setup
         self.title("PixelSwitch - Batch Converter")
         self.geometry("900x700")
         
-        # LOAD ICON 
         icon_path = resource_path("icon.ico")
         try:
             self.iconbitmap(icon_path)
@@ -90,7 +83,6 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
         self.file_list_frame = ctk.CTkScrollableFrame(self.main_frame, label_text="Files to Convert")
         self.file_list_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # Drag & Drop
         self.drop_target_register(DND_FILES)
         self.dnd_bind('<<Drop>>', self.drop_event)
         self.file_list_frame.drop_target_register(DND_FILES)
@@ -140,14 +132,39 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
                                        command=self.start_conversion_thread)
         self.convert_btn.pack(fill="x")
 
-    # --- SETTINGS LOGIC ---
+    # --- LOGGING FEATURE ---
+    def log_event(self, message):
+        """Writes to log.txt. Clears the file if it was last modified on a previous day."""
+        folder = self.get_default_folder()
+        log_path = os.path.join(folder, "log.txt")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        today = date.today()
+
+        # Check if we should clear the log (Daily Reset Logic)
+        if os.path.exists(log_path):
+            # Get the date the file was last modified
+            file_mod_time = os.path.getmtime(log_path)
+            file_mod_date = date.fromtimestamp(file_mod_time)
+            
+            # If the file's date is not today, open in 'w' mode to wipe it
+            mode = "w" if file_mod_date < today else "a"
+        else:
+            mode = "a"
+
+        try:
+            with open(log_path, mode, encoding="utf-8") as f:
+                # If we just wiped it (mode 'w'), add a header
+                if mode == "w":
+                    f.write(f"--- New Log Session Started: {today} ---\n")
+                f.write(f"[{timestamp}] {message}\n")
+        except Exception as e:
+            print(f"Logging failed: {e}")
+
+    # --- SETTINGS & HELPERS ---
     def get_default_folder(self):
         docs = os.path.join(os.path.expanduser("~"), "Documents", "PixelSwitch")
         if not os.path.exists(docs):
-            try:
-                os.makedirs(docs)
-            except OSError:
-                pass 
+            os.makedirs(docs, exist_ok=True)
         return docs
 
     def load_settings(self):
@@ -155,8 +172,7 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
         try:
             with open(self.settings_file, "r") as f:
                 data = json.load(f)
-                if not data.get("output_folder"):
-                    data["output_folder"] = default_path
+                if not data.get("output_folder"): data["output_folder"] = default_path
                 return data
         except FileNotFoundError:
             return {"theme": "System", "last_format": "JPG", "output_folder": default_path}
@@ -168,10 +184,7 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
             json.dump(self.settings, f)
 
     def toggle_theme(self):
-        if self.theme_switch.get() == 1:
-            ctk.set_appearance_mode("Dark")
-        else:
-            ctk.set_appearance_mode("Light")
+        ctk.set_appearance_mode("Dark" if self.theme_switch.get() == 1 else "Light")
         self.save_settings()
 
     def browse_folder(self):
@@ -186,68 +199,49 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
             
     def open_output_folder(self):
         path = self.settings.get("output_folder", self.get_default_folder())
-        if os.path.exists(path):
-            os.startfile(path)
+        if os.path.exists(path): os.startfile(path)
 
-    # --- LIST LOGIC ---
     def clear_list(self):
         self.file_paths = []
         self.status_labels = {}
-        for widget in self.row_widgets:
-            widget.destroy()
+        for widget in self.row_widgets: widget.destroy()
         self.row_widgets = []
-        
         self.placeholder_label.pack(pady=50)
         self.progress_bar.pack_forget()
         self.open_folder_btn.pack_forget() 
         self.convert_btn.pack(fill="x")
 
-    # --- CORE LOGIC ---
     def drop_event(self, event):
         self.placeholder_label.pack_forget()
         raw_files = event.data
-        if raw_files.startswith('{'):
-            paths = raw_files.split('} {')
-            cleaned_paths = [p.strip('{}') for p in paths]
-        else:
-            cleaned_paths = raw_files.split()
-
+        cleaned_paths = [p.strip('{}') for p in (raw_files.split('} {') if raw_files.startswith('{') else raw_files.split())]
         valid_exts = ('.heic', '.jpg', '.jpeg', '.png', '.webp', '.bmp')
         for path in cleaned_paths:
-            if path.lower().endswith(valid_exts):
-                if path not in self.file_paths:
-                    self.file_paths.append(path)
-                    self.add_file_row(path)
+            if path.lower().endswith(valid_exts) and path not in self.file_paths:
+                self.file_paths.append(path)
+                self.add_file_row(path)
 
     def add_file_row(self, path):
         row_frame = ctk.CTkFrame(self.file_list_frame)
         row_frame.pack(fill="x", pady=2)
-        
         self.row_widgets.append(row_frame)
-
-        icon = ctk.CTkLabel(row_frame, text="🖼️", width=30)
-        icon.pack(side="left", padx=5)
-
-        filename = os.path.basename(path)
-        name_label = ctk.CTkLabel(row_frame, text=filename, anchor="w")
-        name_label.pack(side="left", fill="x", expand=True)
-
+        ctk.CTkLabel(row_frame, text="🖼️", width=30).pack(side="left", padx=5)
+        ctk.CTkLabel(row_frame, text=os.path.basename(path), anchor="w").pack(side="left", fill="x", expand=True)
         status = ctk.CTkLabel(row_frame, text="Pending", text_color="orange", width=80)
         status.pack(side="right", padx=10)
         self.status_labels[path] = status
 
     def start_conversion_thread(self):
-        if not self.file_paths:
-            return
+        if not self.file_paths: return
         self.convert_btn.configure(state="disabled", text="Converting...")
         self.progress_bar.pack(fill="x", pady=(10, 5))
         self.progress_bar.set(0)
+        self.log_event(f"--- STARTING NEW CONVERSION BATCH ({len(self.file_paths)} files) ---")
         threading.Thread(target=self.run_conversion).start()
 
     def get_safe_filepath(self, folder, filename, ext):
         base_name = os.path.splitext(filename)[0]
-        counter = 1
-        new_filename = f"{base_name}.{ext}"
+        counter, new_filename = 1, f"{base_name}.{ext}"
         full_path = os.path.join(folder, new_filename)
         while os.path.exists(full_path):
             new_filename = f"{base_name}_{counter}.{ext}"
@@ -257,15 +251,12 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def run_conversion(self):
         import pillow_heif
-        
         target_format = self.format_var.get().lower()
-        total = len(self.file_paths)
         output_dir = self.settings.get("output_folder", self.get_default_folder())
-        
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
 
         for i, filepath in enumerate(self.file_paths):
+            fname = os.path.basename(filepath)
             try:
                 if filepath.lower().endswith(".heic"):
                     heif_file = pillow_heif.read_heif(filepath)
@@ -273,23 +264,22 @@ class PixelSwitchApp(ctk.CTk, TkinterDnD.DnDWrapper):
                 else:
                     img = Image.open(filepath)
                 
-                if target_format in ['jpg', 'jpeg']:
-                    img = img.convert("RGB")
+                if target_format in ['jpg', 'jpeg']: img = img.convert("RGB")
                 
-                filename = os.path.basename(filepath)
-                save_path = self.get_safe_filepath(output_dir, filename, target_format)
-                
+                save_path = self.get_safe_filepath(output_dir, fname, target_format)
                 img.save(save_path, quality=95)
                 self.after(0, self.update_status, filepath, "✅ Done", "green")
+                self.log_event(f"SUCCESS: {fname} -> {os.path.basename(save_path)}")
                 
             except Exception as e:
-                print(f"Error on {filepath}: {e}")
                 self.after(0, self.update_status, filepath, "❌ Error", "red")
+                self.log_event(f"ERROR: Failed to convert {fname}. Reason: {str(e)}")
             
-            self.after(0, self.progress_bar.set, (i + 1) / total)
+            self.after(0, self.progress_bar.set, (i + 1) / len(self.file_paths))
 
         self.after(0, lambda: self.convert_btn.configure(state="normal", text="CONVERT FILES"))
         self.after(0, lambda: self.open_folder_btn.pack(fill="x", pady=5))
+        self.log_event(f"--- BATCH FINISHED ---")
 
     def update_status(self, filepath, text, color):
         if filepath in self.status_labels:
