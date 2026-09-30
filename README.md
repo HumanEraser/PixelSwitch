@@ -1,30 +1,31 @@
-# PixelSwitch 🚀
-> Drag. Drop. Done. The last image converter you'll ever need.
+# PixelSwitch Pro 🚀
+> Drag. Drop. Done. The last image and document converter you'll ever need.
 
-![License](https://img.shields.io/github/license/[YourUsername]/[RepoName])
+![License](https://img.shields.io/github/license/[HumanEraser]/[PixelSwitch])
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
-**PixelSwitch** is a lightweight, offline image converter with a polished drag-and-drop interface.
-Convert photos, RAW files, and PDFs locally with one click—no cloud upload, no login, no subscription.
+**PixelSwitch Pro** is a lightning-fast, 100% offline desktop application with a polished drag-and-drop interface. Convert photos, iPhone HEIC images, RAW files, and PDFs locally with zero cloud uploads, zero tracking, and complete data privacy.
 
 ## ✨ Key Features
-- 🖼 **Drag & Drop:** Drop files directly into the app for instant queueing.
-- 📁 **Batch Conversion:** Process many files at once with a single command.
-- 🌙 **Dark Mode:** Clean UI with optional dark theme support.
-- 📦 **Offline-first:** All processing happens locally on your device.
-- 🖨️ **PDF Support:** Convert pages inside PDFs and optionally merge into a single PDF.
-- 🔧 **Custom Prefix:** Add a filename prefix for easy output organization.
-- 🎚️ **Quality Control:** Adjustable quality slider for JPG, JPEG, and WEBP exports.
+- 🖼 **Flexible Import:** Drag & drop files directly into the window or use the built-in **Add Files** button.
+- 📊 **Live Queue Management:** Real-time queue counter with total item count and payload size, individual file size indicators, instant **View** (👁️) preview, and **Remove** (❌) actions.
+- 📁 **Batch Conversion:** Process large workloads locally using safe multithreading.
+- 🌙 **Dark Mode:** Polished CustomTkinter UI with automatic light/dark mode and persistent preferences.
+- 📦 **100% Offline-first:** All processing happens locally on your machine.
+- 🖨️ **Smart PDF Integration:** Convert pages inside PDFs to individual images, or merge multiple images into a single multi-page PDF without memory spikes.
+- 🔧 **Custom Prefix:** Add custom filename prefixes for clean, automated organization.
+- 🎚️ **Dynamic Quality Control:** Adjustable quality slider with live compression tier descriptions for JPG, WEBP, and high-resolution exports.
+- 🛡️ **Overwrite Protection:** Toggle file overwriting on or off with automatic unique-name fallback suffixes.
 
 ## Supported Input Formats
 - JPG / JPEG
 - PNG
 - WEBP
-- HEIC
+- HEIC (iPhone / Apple format)
 - BMP
 - TIFF
 - PSD
-- RAW formats: CR2, NEF, ARW, DNG
+- RAW: CR2, NEF, ARW, DNG
 - PDF
 
 ## Supported Output Formats
@@ -34,9 +35,9 @@ Convert photos, RAW files, and PDFs locally with one click—no cloud upload, no
 - TIFF
 - PDF
 
-## Installation
+## Installation & Setup
 ```bash
-git clone https://github.com/[YourUsername]/[RepoName].git
+git clone https://github.com/[HumanEraser]/[PixelSwitch].git
 cd PixelSwitch
 python -m venv venv
 venv\Scripts\activate
@@ -48,16 +49,17 @@ python main.py
 
 ## Usage
 1. Run `python main.py`.
-2. Drag files into the app window or click Browse to select an output folder.
-3. Choose the output format and optional settings.
+2. Drag files into the app window or click **Add Files** to select documents and photos.
+3. Choose your target output format, quality level, prefix, and destination folder from the sidebar.
 4. Click **START CONVERSION**.
-5. Open the output folder when conversion completes.
+5. Open your output folder directly from the app when complete.
 
 ## Packaging
-The project includes PyInstaller packaging for standalone builds.
+The project includes PyInstaller packaging support for standalone desktop builds.
+
 Example command:
 ```bash
-pyinstaller --noconsole --onefile --name="PixelSwitchPro" --icon="icon.ico" --add-data "pixel_theme.json;." --add-data "icon.ico;." --add-data "gui;gui" main.py
+pyinstaller --noconsole --onedir --name="PixelSwitch" --add-data "pixel_theme.json;." --add-data "icon.ico;." main.py
 ```
 
 ## Dependencies
@@ -66,13 +68,15 @@ pyinstaller --noconsole --onefile --name="PixelSwitchPro" --icon="icon.ico" --ad
 - pillow==12.1.1
 - pillow_heif==1.2.0
 - tkinterdnd2==0.4.3
+- pymupdf==1.25.0
+- rawpy==0.23.0
 - packaging==26.0
 
 ## Contributing
-Contributions are welcome.
-- Open an issue for feature requests or bugs.
-- Submit a pull request with a clear description.
-- Keep changes focused and easy to review.
+Contributions are welcome!
+
+- Open an issue for feature requests or bug reports.
+- Submit a pull request with a clear description of changes.
 
 ## License
 This project is released under the license shown in `LICENSE`.
