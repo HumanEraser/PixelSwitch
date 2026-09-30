@@ -26,8 +26,7 @@ class SidebarFrame(ctk.CTkFrame):
         self.quality_slider = ctk.CTkSlider(self, from_=10, to=100, number_of_steps=18, command=self.update_quality_label)
         self.quality_slider.set(self.settings.get("last_quality", 95))
         self.quality_slider.grid(row=6, column=0, padx=20, pady=5)
-        self.update_quality_label(self.quality_slider.get())
-
+        
         self.overwrite_var = ctk.BooleanVar(value=True)
         self.overwrite_switch = ctk.CTkSwitch(self, text="Overwrite Files", variable=self.overwrite_var)
         self.overwrite_switch.grid(row=7, column=0, padx=20, pady=10)
@@ -35,10 +34,13 @@ class SidebarFrame(ctk.CTkFrame):
         self.merge_pdf_var = ctk.BooleanVar(value=True)
         self.merge_pdf_switch = ctk.CTkSwitch(self, text="Merge into one PDF", variable=self.merge_pdf_var)
         self.merge_pdf_switch.grid(row=8, column=0, padx=20, pady=10)
-        self.merge_pdf_switch.grid_remove()
+        
+        # Only hide the PDF switch if the format is NOT PDF on startup
+        if self.settings.get("last_format") != "PDF":
+            self.merge_pdf_switch.grid_remove()
 
         self.clear_btn = ctk.CTkButton(
-            self, text="🗑️ Clear List", fg_color="transparent", border_width=2,
+            self, text="🗑️️ Clear List", fg_color="transparent", border_width=2,
             border_color=("#3B8ED0", "#1F6AA5"), command=clear_list
         )
         self.clear_btn.grid(row=9, column=0, padx=20, pady=20)
@@ -50,8 +52,21 @@ class SidebarFrame(ctk.CTkFrame):
         if self.settings.get("theme") == "Dark":
             self.theme_switch.select()
 
+        # Call this at the end to set the initial label text correctly
+        self.update_quality_label(self.quality_slider.get())
+
     def update_quality_label(self, value):
-        self.quality_label.configure(text=f"Quality: {int(value)}%")
+        val = int(value)
+        if val == 100:
+            desc = "\n(Lossless - Massive Size)"
+        elif val >= 90:
+            desc = "\n(High - Recommended)"
+        elif val >= 70:
+            desc = "\n(Balanced)"
+        else:
+            desc = "\n(Web - Small Size)"
+            
+        self.quality_label.configure(text=f"Quality: {val}% {desc}")
 
     def set_widgets_state(self, state):
         self.format_menu.configure(state=state)

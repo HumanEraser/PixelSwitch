@@ -3,7 +3,13 @@ import sys
 import json
 from datetime import datetime, date
 
-SETTINGS_FILE = "settings.json"
+def get_default_folder():
+    docs = os.path.join(os.path.expanduser("~"), "Documents", "PixelSwitch")
+    os.makedirs(docs, exist_ok=True)
+    return docs
+
+# Move settings into the user folder to avoid Program Files write-permission crashes
+SETTINGS_FILE = os.path.join(get_default_folder(), "settings.json")
 
 def resource_path(relative_path):
     try:
@@ -11,11 +17,6 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
-
-def get_default_folder():
-    docs = os.path.join(os.path.expanduser("~"), "Documents", "PixelSwitch")
-    os.makedirs(docs, exist_ok=True)
-    return docs
 
 def log_event(message):
     log_path = os.path.join(get_default_folder(), "log.txt")
